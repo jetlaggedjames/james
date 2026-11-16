@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Contact — James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="page">
+  <div class="head"><h1>Contact</h1><span class="meta">form 01 · correspondence</span></div>
+  <!-- Web3Forms forwards submissions to your inbox; your address is never in the page.
+       Get a free access key at web3forms.com and paste it below. -->
+  <form class="card" id="f">
+    <input type="hidden" name="access_key" value="YOUR_WEB3FORMS_KEY">
+    <input type="hidden" name="subject" value="New message from the archive">
+    <input type="checkbox" name="botcheck" style="display:none">
+    <label for="n">Name</label><input id="n" name="name" required autocomplete="name">
+    <label for="e">Email</label><input id="e" name="email" type="email" required autocomplete="email">
+    <label for="m">Message</label><textarea id="m" name="message" required></textarea>
+    <button type="submit">send it →</button>
+    <div class="status" id="s"></div>
+  </form>
+</main>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script>
+  const f = document.getElementById("f"), s = document.getElementById("s");
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (f.access_key.value === "YOUR_WEB3FORMS_KEY") { s.textContent = "Form not connected yet (needs an access key)."; return; }
+    s.textContent = "sending…";
+    try {
+      const r = await fetch("https://api.web3forms.com/submit", { method: "POST", body: new FormData(f) });
+      const j = await r.json();
+      s.textContent = j.success ? "Received. I'll write back soon." : "Something went wrong. Try again?";
+      if (j.success) f.reset();
+    } catch { s.textContent = "Couldn't send. Check your connection."; }
+  };
+</script>
+</body>
+</html>

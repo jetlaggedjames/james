@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="stage" id="stage">
+  <pre class="name" id="name" aria-label="James"></pre>
+  <div class="artbox" id="box">
+    <pre class="art" id="art" aria-hidden="true"></pre>
+  </div>
+  <a class="caption" id="cap" href="photos.html"></a>
+</main>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script>
+  const box = document.getElementById("box"), cap = document.getElementById("cap"), name = document.getElementById("name");
+  const art = new AsciiArt(document.getElementById("art"), { cols: 260, minFont: 4 });
+  let i = 0, timer = 0, busy = false, queued = null;
+
+  // the name signs itself once per visit; coming back home just shows it
+  const firstVisit = (() => { try { const s = sessionStorage.getItem("signed"); sessionStorage.setItem("signed", "1"); return !s; } catch (e) { return true; } })();
+  const nameWidth = () => Math.min(430, innerWidth * 0.6);
+  const signed = drawSignature(name, nameWidth(), firstVisit);
+
+  function fit() { art.size(box.clientWidth, box.clientHeight); }
+  async function go(n) {
+    clearTimeout(timer);
+    i = (n + HOME.length) % HOME.length;
+    const p = HOME[i], my = art.token + 1;
+    cap.innerHTML = `<b>${p.no}</b> · ${p.name}`;
+    cap.href = `photos.html?cat=${p.cat}#${p.no}`;
+    preloadArt(HOME[(i + 1) % HOME.length]);                 // next item is ready before it's needed
+    await art.show(p);
+    if (art.token !== my) return;                              // a newer click took over
+    if (p.type === "video" && art.ended) art.ended.then(() => { if (art.token === my) go(i + 1); });
+    else timer = setTimeout(() => go(i + 1), 6500);
+  }
+  fit();
+  (async () => { if (firstVisit) await new Promise(r => setTimeout(r, 350)); go(0); })();
+
+  document.getElementById("art").onclick = () => go(i + 1);
+  addEventListener("keydown", e => {
+    if (e.target.closest("input,textarea")) return;
+    if (e.key === "ArrowRight") go(i + 1);
+    if (e.key === "ArrowLeft") go(i - 1);
+  });
+  let rt; addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { signed.then(() => drawSignature(name, nameWidth(), false)); fit(); go(i); }, 200);
+  });
+</script>
+</body>
+</html>

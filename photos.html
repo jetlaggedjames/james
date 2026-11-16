@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Photos — James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="page">
+  <div class="head">
+    <h1 id="h">Photographs</h1>
+    <span class="meta"><span id="cnt"></span> items · drawer <span id="code"></span></span>
+  </div>
+  <div id="tabs"></div>
+  <div class="tools">
+    <div id="zoomer"></div>
+    <span class="tip">ctrl + scroll or pinch also zooms</span>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="viewer" id="v" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <div class="veil"></div>
+  <div class="stagev" id="sv"><div class="pan" id="pan"></div></div>
+  <button class="ctl close" id="vc" aria-label="Close">✕</button>
+  <button class="ctl prev" id="vp" aria-label="Previous">←</button>
+  <button class="ctl next" id="vn" aria-label="Next">→</button>
+  <div class="zbar" id="zbar">
+    <button id="zo" aria-label="Zoom out">−</button><span id="zl">fit</span><button id="zi" aria-label="Zoom in">+</button>
+  </div>
+  <div class="bar">
+    <div class="line">
+      <span class="no" id="vno"></span>
+      <span class="nm" id="vnm"></span>
+      <button class="more" id="vm" aria-expanded="false">details <svg viewBox="0 0 10 10"><path d="M1 3.5 5 7 9 3.5"/></svg></button>
+      <span class="pos" id="vpos"></span>
+    </div>
+    <div class="info"><div><dl id="vd"></dl></div></div>
+  </div>
+</div>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script>
+  let cat = new URLSearchParams(location.search).get("cat") || "all";
+  let list = [];
+  const grid = document.getElementById("grid");
+  const anim = () => motionOK();
+  const fmtBytes = b => !b ? null : b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.round(b / 1024) + " KB";
+  const ratio = p => p.w && p.h ? p.w / p.h : (p.type === "video" ? 9 / 16 : 1.5);
+
+  // ---------- drawers ----------
+  const tile = (p, i, cls) => `<figure data-i="${i}" id="${p.no}" class="${cls}" style="--ar:${ratio(p).toFixed(4)};animation-delay:${Math.min(i, 24) * 20}ms">${
+    p.type === "video"
+      ? `<video src="${p.src}" muted loop playsinline autoplay preload="metadata"></video><span class="badge">LOOP</span>`
+      : `<img loading="lazy" decoding="async" src="${p.thumb || p.src}" alt="${p.name}" width="${p.w || ""}" height="${p.h || ""}">`}<figcaption>${p.no}</figcaption></figure>`;
+  function render(animate) {
+    list = cat === "all" ? PHOTOS : PHOTOS.filter(p => p.cat === cat);
+    grid.innerHTML = list.map((p, i) => tile(p, i, animate ? "in" : "")).join("");
+    // videos without stored dimensions: take them from the file once known
+    grid.querySelectorAll("video").forEach(v => v.addEventListener("loadedmetadata", () => {
+      const p = list[+v.closest("figure").dataset.i]; p.w = v.videoWidth; p.h = v.videoHeight;
+      v.closest("figure").style.setProperty("--ar", (p.w / p.h).toFixed(4));
+    }, { once: true }));
+    const empty = grid.nextElementSibling;
+    if (empty && empty.classList.contains("empty")) empty.remove();
+    if (!list.length) grid.insertAdjacentHTML("afterend", `<div class="empty">This drawer is empty. For now.</div>`);
+    const c = CATEGORIES.find(c => c.id === cat);
+    morphText(document.getElementById("h"), c ? c.name : "Photographs");
+    morphText(document.getElementById("code"), c ? c.code : "ALL");
+    document.title = (c ? c.name : "Photos") + " — James";
+    odometer(document.getElementById("cnt"), list.length, 4);
+  }
+  function shuffle(id) {
+    cat = id;
+    history.replaceState(null, "", cat === "all" ? "photos.html" : "?cat=" + cat);
+    const figs = [...grid.children].slice(0, 30);
+    if (!anim() || !figs.length) return render(anim());
+    figs.forEach((f, i) => { f.classList.remove("in"); f.style.animationDelay = i * 10 + "ms"; f.classList.add("out"); });
+    setTimeout(() => render(true), 230 + figs.length * 10);
+  }
+  Tabs(document.getElementById("tabs"),
+    [{ id: "all", label: "All", count: PHOTOS.length },
+     ...CATEGORIES.map(k => ({ id: k.id, label: k.name, count: PHOTOS.filter(p => p.cat === k.id).length }))],
+    cat, shuffle);
+  render(true);
+
+  // ---------- size: row height of the justified grid ----------
+  const STOPS = [{ cols: 520, k: 1 }, { cols: 300, k: 2 }, { cols: 180, k: 3 }, { cols: 100, k: 4 }];
+  let rowh = +(localStorage.getItem("rowh") || 180);
+  if (!STOPS.some(s => s.cols === rowh)) rowh = 180;
+  function setRow(v) {
+    rowh = v;
+    const scale = innerWidth < 600 ? 0.55 : 1;
+    grid.style.setProperty("--rowh", Math.round(v * scale) + "px");
+    grid.style.setProperty("--gap", v <= 100 ? "3px" : v >= 500 ? "14px" : "6px");
+    grid.classList.toggle("dense", v <= 100);
+    try { localStorage.setItem("rowh", v); } catch (e) {}
+  }
+  setRow(rowh);
+  // tiles glide to their new size (only the ones on screen are tracked, so it stays cheap with thousands)
+  function zoomTo(v) {
+    if (!document.startViewTransition || !anim()) return setRow(v);
+    const vis = [...grid.children].filter(f => { const r = f.getBoundingClientRect(); return r.bottom > -50 && r.top < innerHeight + 50; }).slice(0, 80);
+    vis.forEach((f, k) => f.style.viewTransitionName = "t" + k);
+    document.documentElement.classList.add("vt-zoom");
+    const t = document.startViewTransition(() => setRow(v));
+    t.finished.finally(() => { vis.forEach(f => f.style.viewTransitionName = ""); document.documentElement.classList.remove("vt-zoom"); });
+  }
+  const zoom = Zoomer(document.getElementById("zoomer"), STOPS, rowh, zoomTo);
+  const stepRow = d => { const i = STOPS.findIndex(s => s.cols === rowh) + d; if (STOPS[i]) { zoomTo(STOPS[i].cols); zoom.select(STOPS[i].cols); } };
+  let wheelLock = 0;
+  addEventListener("wheel", e => {
+    if (!e.ctrlKey || v.classList.contains("open")) return;
+    e.preventDefault();
+    const now = Date.now(); if (now - wheelLock < 350) return; wheelLock = now;
+    stepRow(e.deltaY > 0 ? 1 : -1);
+  }, { passive: false });
+  let pinch0 = 0;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  grid.addEventListener("touchstart", e => { if (e.touches.length === 2) pinch0 = dist(e.touches); }, { passive: true });
+  grid.addEventListener("touchmove", e => {
+    if (e.touches.length !== 2 || !pinch0) return;
+    const r = dist(e.touches) / pinch0;
+    if (r > 1.35) { stepRow(-1); pinch0 = dist(e.touches); } else if (r < 0.74) { stepRow(1); pinch0 = dist(e.touches); }
+  }, { passive: true });
+  grid.addEventListener("touchend", () => pinch0 = 0);
+
+  // ---------- viewer ----------
+  const v = document.getElementById("v"), sv = document.getElementById("sv"), pan = document.getElementById("pan");
+  const veil = v.querySelector(".veil"), bar = v.querySelector(".bar"), ctls = [...v.querySelectorAll(".ctl, .zbar")];
+  let at = 0, media = null, origin = [innerWidth / 2, innerHeight / 2];
+  const OUT = "cubic-bezier(.16,1,.3,1)";
+  const safe = (fn) => { try { return fn(); } catch (e) { return null; } };
+
+  // ---- zoom + pan ----
+  const Z = { s: 1, x: 0, y: 0 };
+  const zl = document.getElementById("zl");
+  function applyZ(smooth) {
+    if (Z.s <= 1.001) { Z.s = 1; Z.x = 0; Z.y = 0; }
+    else if (media) {                         // keep the image covering the screen edge-to-edge while zoomed
+      const w = media.offsetWidth * Z.s, h = media.offsetHeight * Z.s, W = sv.clientWidth, H = sv.clientHeight;
+      const ox = (W - media.offsetWidth) / 2, oy = (H - media.offsetHeight) / 2;
+      const minX = Math.min(0, W - w) - ox, maxX = Math.max(0, W - w) - ox;
+      const minY = Math.min(0, H - h) - oy, maxY = Math.max(0, H - h) - oy;
+      Z.x = w <= W ? (W - w) / 2 - ox : Math.min(maxX, Math.max(minX, Z.x));
+      Z.y = h <= H ? (H - h) / 2 - oy : Math.min(maxY, Math.max(minY, Z.y));
+    }
+    pan.style.transition = smooth ? "transform .3s cubic-bezier(.2,.8,.2,1)" : "none";
+    pan.style.transform = `translate(${Z.x}px,${Z.y}px) scale(${Z.s})`;
+    sv.classList.toggle("zoomed", Z.s > 1);
+    zl.textContent = Z.s > 1 ? Math.round(Z.s * 100) + "%" : "fit";
+  }
+  // zoom around a screen point (cx, cy)
+  function zoomAt(ns, cx, cy, smooth) {
+    ns = Math.max(1, Math.min(8, ns));
+    const r = pan.getBoundingClientRect();
+    const px = (cx - r.left) / Z.s, py = (cy - r.top) / Z.s;   // point in image space
+    const base = media.getBoundingClientRect();
+    Z.x += (cx - r.left) - px * ns; Z.y += (cy - r.top) - py * ns;
+    Z.x += 0; Z.s = ns;
+    applyZ(smooth);
+  }
+  const center = () => { const r = sv.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  document.getElementById("zi").onclick = () => zoomAt(Z.s * 1.6, ...center(), true);
+  document.getElementById("zo").onclick = () => zoomAt(Z.s / 1.6, ...center(), true);
+  zl.onclick = () => { Z.s = 1; applyZ(true); };
+  sv.addEventListener("wheel", e => { e.preventDefault(); if (!media) return; zoomAt(Z.s * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022)), e.clientX, e.clientY, false); }, { passive: false });
+  sv.addEventListener("dblclick", e => { if (!media) return; Z.s > 1 ? (Z.s = 1, applyZ(true)) : zoomAt(2.5, e.clientX, e.clientY, true); });
+  // pointer drag (mouse + one finger) and pinch (two fingers)
+  const pts = new Map(); let last = null, pinch = null, moved = 0, swipeX = 0;
+  sv.addEventListener("pointerdown", e => { sv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; moved = 0; swipeX = e.clientX;
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: Z.s }; } });
+  sv.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2 && pinch) {
+      const [a, b] = [...pts.values()];
+      zoomAt(pinch.s * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, false);
+    } else if (Z.s > 1 && last) {
+      Z.x += e.clientX - last[0]; Z.y += e.clientY - last[1]; applyZ(false);
+      sv.classList.add("dragging");
+    }
+    moved += Math.abs(e.clientX - last[0]) + Math.abs(e.clientY - last[1]);
+    last = [e.clientX, e.clientY];
+  });
+  const up = e => {
+    pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
+    sv.classList.remove("dragging");
+    if (!pts.size && Z.s === 1 && e.pointerType !== "mouse") { const dx = e.clientX - swipeX; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); }
+    last = pts.size ? [...pts.values()][0] : null;
+  };
+  sv.addEventListener("pointerup", up); sv.addEventListener("pointercancel", up);
+
+  // ---- content ----
+  function mount(p) {
+    const el = document.createElement(p.type === "video" ? "video" : "img");
+    if (p.type === "video") Object.assign(el, { muted: true, loop: true, autoplay: true, playsInline: true });
+    // progressive: the (already cached) thumbnail appears instantly at full size, the sharp file swaps in when it lands
+    const progressive = p.type !== "video" && p.thumb;
+    el.src = progressive ? p.thumb : p.src; el.className = "media"; el.alt = p.name; el.draggable = false;
+    if (p.w && p.h) { el.width = p.w; el.height = p.h; }   // reserves the real size so nothing jumps on swap
+    if (progressive) {
+      const full = new Image(); full.decoding = "async"; full.src = p.src;
+      full.onload = () => { if (media === el) (full.decode ? full.decode() : Promise.resolve()).catch(() => {}).then(() => { el.src = p.src; }); };
+    }
+    pan.replaceChildren(el); media = el;
+    Z.s = 1; applyZ(false);
+    document.getElementById("vno").textContent = p.no;
+    document.getElementById("vnm").textContent = p.name;
+    document.getElementById("vpos").textContent = `${at + 1} / ${list.length}`;
+    const info = () => {
+      const w = p.w || el.naturalWidth || el.videoWidth, h = p.h || el.naturalHeight || el.videoHeight;
+      const rows = [["place", p.place], ["date", p.date], ["camera", p.camera], ["lens", p.lens], ["settings", p.settings],
+        ["pixels", w && h ? `${w} × ${h}` : null], ["file", [p.src.split(".").pop().toUpperCase(), fmtBytes(p.bytes)].filter(Boolean).join(" · ")],
+        ["drawer", (CATEGORIES.find(k => k.id === p.cat) || {}).name], ["notes", p.notes]].filter(([k, x]) => x || k !== "notes");
+      document.getElementById("vd").innerHTML = rows.map(([k, x], j) =>
+        `<div style="transition-delay:${j * 30}ms"><dt>${k}</dt><dd${k === "notes" ? ' class="notes"' : ""}>${x || "—"}</dd></div>`).join("");
+    };
+    info();
+    history.replaceState(null, "", location.search + "#" + p.no);
+    const ready = p.type === "video"
+      ? new Promise(r => el.readyState >= 1 ? r() : el.addEventListener("loadedmetadata", r, { once: true }))
+      : (el.decode ? el.decode() : new Promise(r => el.onload = r)).catch(() => {});
+    // never wait forever (slow network, odd browsers)
+    return Promise.race([ready, new Promise(r => setTimeout(r, 1500))]).then(info);
+  }
+  // transform + crop that place the full-size media exactly over its tile
+  function toTile() {
+    const th = grid.querySelector(`[data-i="${at}"]`); if (!th || !media) return null;
+    const a = th.getBoundingClientRect(); if (a.bottom < 0 || a.top > innerHeight || !a.width) return null;
+    const b = media.getBoundingClientRect(); if (!b.width) return null;
+    const s = Math.max(a.width / b.width, a.height / b.height);
+    const ix = Math.max(0, (b.width - a.width / s) / 2), iy = Math.max(0, (b.height - a.height / s) / 2);
+    return { t: `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px,${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${s})`, clip: `inset(${iy}px ${ix}px)` };
+  }
+  const circle = r => `circle(${r} at ${origin[0]}px ${origin[1]}px)`;
+  const R_FULL = () => Math.hypot(Math.max(origin[0], innerWidth - origin[0]), Math.max(origin[1], innerHeight - origin[1])) + "px";
+
+  async function open(i, ev) {
+    at = i;
+    const th = grid.querySelector(`[data-i="${i}"]`);
+    if (ev) origin = [ev.clientX, ev.clientY];
+    else if (th) { const r = th.getBoundingClientRect(); origin = [r.left + r.width / 2, r.top + r.height / 2]; }
+    v.classList.remove("details"); document.getElementById("vm").setAttribute("aria-expanded", "false");
+    v.style.visibility = "hidden"; v.classList.add("open");
+    document.body.style.overflow = "hidden";
+    await mount(list[at]);
+    v.style.visibility = "";
+    if (!anim()) return;
+    safe(() => {
+      const from = toTile();
+      veil.animate([{ clipPath: circle("0px") }, { clipPath: circle(R_FULL()) }], { duration: 560, easing: OUT });
+      if (from) media.animate([{ transform: from.t, clipPath: from.clip }, { transform: "none", clipPath: "inset(0)" }], { duration: 560, easing: OUT });
+      else media.animate([{ opacity: 0, transform: "scale(.94)" }, { opacity: 1, transform: "none" }], { duration: 420, easing: OUT });
+      bar.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 480, delay: 160, easing: OUT, fill: "backwards" });
+      ctls.forEach((c, k) => c.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 260 + k * 40, fill: "backwards" }));
+    });
+  }
+  let stepping = false;
+  async function step(d) {
+    if (stepping) return; stepping = true;
+    at = (at + d + list.length) % list.length;
+    const old = media;
+    if (anim() && old) await safe(() => old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${-d * 36}px)` }], { duration: 150, easing: "ease-in", fill: "forwards" }).finished);
+    await mount(list[at]);
+    if (anim()) safe(() => media.animate([{ opacity: 0, transform: `translateX(${d * 36}px)` }, { opacity: 1, transform: "none" }], { duration: 320, easing: OUT }));
+    stepping = false;
+  }
+  let closing = false;
+  async function close() {
+    if (closing || !v.classList.contains("open")) return; closing = true;
+    Z.s = 1; applyZ(false);
+    const th = grid.querySelector(`[data-i="${at}"]`);
+    if (th) { const r = th.getBoundingClientRect(); origin = [r.left + r.width / 2, r.top + r.height / 2]; }
+    if (anim()) {
+      v.classList.remove("details");
+      await safe(async () => {
+        const to = toTile(), D = 420, E = "cubic-bezier(.5,0,.15,1)";
+        ctls.forEach(c => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }));
+        bar.animate([{ transform: "none" }, { transform: "translateY(100%)" }], { duration: 260, easing: "ease-in", fill: "forwards" });
+        veil.animate([{ clipPath: circle(R_FULL()) }, { clipPath: circle("0px") }], { duration: D, easing: E, fill: "forwards" });
+        await media.animate(to ? [{ transform: "none", clipPath: "inset(0)" }, { transform: to.t, clipPath: to.clip }]
+                               : [{ opacity: 1 }, { opacity: 0, transform: "scale(.94)" }], { duration: D, easing: E, fill: "forwards" }).finished;
+      });
+    }
+    v.classList.remove("open"); pan.replaceChildren(); media = null;
+    v.getAnimations({ subtree: true }).forEach(a => a.cancel());
+    document.body.style.overflow = "";
+    history.replaceState(null, "", location.pathname + location.search);
+    closing = false;
+  }
+  grid.addEventListener("click", e => { const f = e.target.closest("figure"); if (f) open(+f.dataset.i, e); });
+  document.getElementById("vp").onclick = () => step(-1);
+  document.getElementById("vn").onclick = () => step(1);
+  document.getElementById("vc").onclick = close;
+  document.getElementById("vm").onclick = e => { const on = v.classList.toggle("details"); e.currentTarget.setAttribute("aria-expanded", on); };
+  addEventListener("keydown", e => {
+    if (!v.classList.contains("open")) return;
+    if (e.key === "ArrowRight") step(1); if (e.key === "ArrowLeft") step(-1); if (e.key === "Escape") close();
+    if (e.key === "i") document.getElementById("vm").click();
+    if (e.key === "+" || e.key === "=") zoomAt(Z.s * 1.6, ...center(), true);
+    if (e.key === "-") zoomAt(Z.s / 1.6, ...center(), true);
+    if (e.key === "0") { Z.s = 1; applyZ(true); }
+  });
+  addEventListener("resize", () => { if (media) applyZ(false); });
+  if (location.hash) { const i = list.findIndex(p => "#" + p.no === location.hash); if (i >= 0) requestAnimationFrame(() => open(i)); }
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="page">
+  <div class="head"><h1 id="h"></h1><span class="meta"><span id="cnt"></span> items · drawer <span id="code"></span></span></div>
+  <div id="tabs"></div>
+  <div class="drawer" id="list"></div>
+</main>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script>
+  // Projects, writings and videos share this page. Entries will come from the dashboard.
+  // item: { sub: "rocketry", title: "…", date: "2026-01-01", href: "…" }
+  const D = {
+    projects: { title: "Projects", code: "PRJ", subs: ["rocketry", "telescope", "misc"], cols: ["no.", "project", "date"], items: [] },
+    writings: { title: "Writings", code: "WRT", cols: ["no.", "title", "date"], items: [] },
+    videos:   { title: "Videos",   code: "VID", cols: ["no.", "title", "date"], items: [] },
+  };
+  const q = new URLSearchParams(location.search), key = D[q.get("d")] ? q.get("d") : "writings", d = D[key];
+  let sub = q.get("s") || "all";
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  document.title = d.title + " — James";
+  document.getElementById("code").textContent = d.code;
+
+  function render() {
+    const items = sub === "all" ? d.items : d.items.filter(x => x.sub === sub);
+    document.getElementById("h").textContent = d.title + (sub !== "all" ? " / " + cap(sub) : "");
+    odometer(document.getElementById("cnt"), items.length, 4);
+    document.getElementById("list").innerHTML =
+      `<div class="row">${d.cols.map(c => `<span>${c}</span>`).join("")}</div>` +
+      (items.length
+        ? items.map((x, i) => `<div class="row in" style="animation-delay:${i * 30}ms"><span>${d.code}-${String(i + 1).padStart(4, "0")}</span><span class="t">${x.title}</span><span>${x.date || ""}</span></div>`).join("")
+        : `<div class="row in"><span>${d.code}-0000</span><span class="t">Nothing filed here yet.</span><span>—</span></div>`);
+  }
+  if (d.subs) Tabs(document.getElementById("tabs"),
+    [{ id: "all", label: "All", count: d.items.length }, ...d.subs.map(s => ({ id: s, label: cap(s), count: d.items.filter(x => x.sub === s).length }))],
+    sub, id => {
+      sub = id;
+      history.replaceState(null, "", `?d=${key}` + (sub === "all" ? "" : "&s=" + sub));
+      document.querySelectorAll("#list .row.in").forEach(r => { r.classList.remove("in"); r.style.animation = "fileOut .22s ease-in both"; });
+      setTimeout(render, motionOK() ? 230 : 0);
+    });
+  render();
+</script>
+</body>
+</html>

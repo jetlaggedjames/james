@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Dashboard — James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .page{max-width:980px}
+  .tb{position:sticky;top:0;z-index:5;background:var(--paper);display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule);margin-bottom:14px;font:12px var(--mono)}
+  .tb input,.tb select,.gh input{font:13px var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:7px 9px;min-height:36px}
+  .tb input:focus,.tb select:focus,.gh input:focus{outline:none;border-color:var(--ink)}
+  .tb .q{flex:1;min-width:140px}
+  .btn{background:var(--ink);color:var(--paper);border:none;font:13px var(--mono);padding:0 14px;min-height:36px;cursor:pointer}
+  .btn:hover{background:var(--blue)}
+  .btn:disabled{opacity:.35;cursor:default;background:var(--ink)}
+  .btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
+  .btn.ghost:hover{border-color:var(--ink);background:none}
+  .ss{margin-left:auto;color:var(--ink-2);white-space:nowrap}.ss.ok{color:var(--blue)}.ss.err{color:#b3261e}
+  .gh{border:1px solid var(--rule);padding:12px 14px;margin-bottom:14px;font:12px var(--mono);color:var(--ink-2)}
+  .gh summary{cursor:pointer;color:var(--ink);list-style:none;display:flex;gap:10px;align-items:center}
+  .gh summary::-webkit-details-marker{display:none}
+  .gh summary::before{content:"▸";transition:transform .25s}
+  .gh[open] summary::before{transform:rotate(90deg)}
+  .gh .grid2{display:grid;grid-template-columns:1fr 110px;gap:8px;margin:12px 0 8px}
+  .gh .grid2 input{width:100%}
+  .gh .full{grid-column:1/-1}
+  .gh p{margin:6px 0;line-height:1.5}
+  .hint{font:12px var(--mono);color:var(--ink-2);margin:0 0 12px}
+  .uploads{display:grid;gap:4px;margin-bottom:12px;font:12px var(--mono)}
+  .uploads div{display:flex;justify-content:space-between;gap:10px;border:1px dashed var(--rule);padding:6px 10px}
+  .uploads b{font-weight:400;color:var(--blue);white-space:nowrap}
+  .dropall{position:fixed;inset:0;z-index:60;background:color-mix(in srgb,var(--paper) 88%,transparent);display:none;place-items:center;font:400 34px var(--serif);border:3px dashed var(--ink)}
+  .dropall.on{display:grid}
+  .card{display:grid;grid-template-columns:96px 1fr;gap:14px;border:1px solid var(--rule);padding:10px;margin-bottom:8px;background:var(--paper);animation:fileIn .35s var(--out) both}
+  .card.new{border-color:var(--blue)}
+  .card .th{width:96px;height:96px;object-fit:cover;background:var(--paper-2);display:block}
+  .card .main{min-width:0;display:grid;gap:8px}
+  .row1{display:flex;gap:10px;align-items:center;font:11px var(--mono);min-width:0}
+  .row1 .no{color:var(--blue)}
+  .row1 .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row1 .dim{color:var(--ink-2);margin-left:auto;white-space:nowrap}
+  .f{display:grid;grid-template-columns:1.4fr 1fr 130px;gap:8px}
+  .f input,.f select,.more input,.more textarea{font:13px var(--mono);color:var(--ink);background:transparent;border:none;border-bottom:1px solid var(--rule);padding:6px 0;min-height:34px;width:100%;border-radius:0}
+  .f input:focus,.more input:focus,.more textarea:focus{outline:none;border-color:var(--blue)}
+  .f .title{font:17px var(--serif)}
+  .acts{display:flex;flex-wrap:wrap;gap:6px}
+  .acts button{background:none;border:1px solid var(--rule);font:12px var(--mono);min-height:32px;padding:0 10px;cursor:pointer;color:var(--ink);transition:border-color .2s,background .2s,color .2s}
+  .acts button:hover{border-color:var(--ink)}
+  .acts .star.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .acts .del{margin-left:auto}
+  .acts .del:hover{background:#b3261e;border-color:#b3261e;color:#fff}
+  .more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s var(--out)}
+  .card.open .more{grid-template-rows:1fr}
+  .more>div{overflow:hidden;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px 12px;font:11px var(--mono);color:var(--ink-2)}
+  .more label{display:flex;flex-direction:column}
+  .more .wide{grid-column:1/-1}
+  .more textarea{resize:vertical;font:15px var(--serif);min-height:40px}
+  .busy{opacity:.5;pointer-events:none}
+  @media (max-width:640px){
+    .card{grid-template-columns:72px 1fr;gap:10px}
+    .card .th{width:72px;height:72px}
+    .f{grid-template-columns:1fr 1fr}
+    .f .title{grid-column:1/-1}
+    .tb .q{order:5;flex-basis:100%}
+    .acts button{min-height:38px}
+    .gh .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="page">
+  <div class="head"><h1>Dashboard</h1><span class="meta" id="sum"></span></div>
+
+  <details class="gh" id="gh">
+    <summary>publishing <span id="ghstate"></span></summary>
+    <div class="grid2">
+      <input id="ghrepo" placeholder="github-username/repo-name" autocomplete="off" spellcheck="false">
+      <input id="ghbranch" placeholder="main" autocomplete="off" spellcheck="false">
+      <input id="ghtoken" class="full" type="password" placeholder="GitHub token (stays on this device only)" autocomplete="off">
+    </div>
+    <button class="btn ghost" id="ghsave">save &amp; check</button>
+    <p>Token: GitHub → Settings → Developer settings → Fine-grained tokens → access to <b>only this repo</b>, permission <b>Contents: read and write</b>. It's stored only in this browser.</p>
+  </details>
+
+  <div class="tb">
+    <button class="btn" id="addb">+ add photos</button>
+    <select id="defcat" title="Drawer for new uploads"></select>
+    <input class="q" id="q" type="search" placeholder="search title, place, number…">
+    <select id="fcat"><option value="">all drawers</option></select>
+    <button class="btn" id="pub" disabled>publish</button>
+    <span class="ss" id="ss"></span>
+    <input type="file" id="pick" multiple accept="image/*,video/*" hidden>
+  </div>
+  <p class="hint" id="hint"></p>
+  <div class="uploads" id="ups"></div>
+  <div id="items"></div>
+</main>
+<div class="dropall" id="dropall">drop to add</div>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script src="publish.js"></script>
+<script>
+  let items = (window.PHOTOS_RAW || []).map(p => ({ ...p }));
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const isVid = s => /\.(mp4|webm|mov)$/i.test(s);
+  const kb = b => !b ? "" : b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.round(b / 1024) + " KB";
+  const opts = sel => CATEGORIES.map(c => `<option value="${c.id}"${c.id === sel ? " selected" : ""}>${c.name}</option>`).join("");
+  $("defcat").innerHTML = opts(localStorage.getItem("defcat") || "rocketry");
+  $("defcat").onchange = () => localStorage.setItem("defcat", $("defcat").value);
+  $("fcat").insertAdjacentHTML("beforeend", opts(""));
+
+  // ---------- mode: "local" (this computer's server) or "online" (straight to GitHub) ----------
+  let LOCAL = false;
+  const pending = new Map();      // online mode: path -> Blob waiting to be published
+  let dirty = false;              // online mode: photo list edited since last publish
+  const ss = $("ss");
+  const status = (t, cls = "") => { ss.className = "ss " + cls; ss.textContent = t; };
+
+  function refreshPub() {
+    const ready = GH.ready();
+    $("ghstate").textContent = ready ? `· ${GH.cfg().repo}` : "· not set up";
+    if (LOCAL) { $("pub").disabled = !ready; $("pub").textContent = "publish to site"; return; }
+    const n = pending.size + (dirty ? 1 : 0);
+    $("pub").disabled = !ready || !n;
+    $("pub").textContent = n ? `publish (${pending.size ? pending.size + " files" : "edits"})` : "published";
+  }
+  function initGhForm() {
+    const c = GH.cfg();
+    $("ghrepo").value = c.repo; $("ghbranch").value = c.branch; $("ghtoken").value = c.token;
+    if (!GH.ready()) $("gh").open = true;
+    $("ghsave").onclick = async () => {
+      GH.ls.set("gh.repo", $("ghrepo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, ""));
+      GH.ls.set("gh.branch", $("ghbranch").value.trim() || "main");
+      GH.ls.set("gh.token", $("ghtoken").value.trim());
+      $("ghstate").textContent = "· checking…";
+      try {
+        const r = await GH.check();
+        if (!r.permissions || !r.permissions.push) throw new Error("token can read but not write this repo");
+        refreshPub(); status("GitHub connected ✓", "ok"); $("gh").open = false;
+      } catch (e) { $("ghstate").textContent = "· " + e.message; }
+    };
+  }
+
+  function numbers() {
+    const n = {};
+    return items.map(p => { const c = CATEGORIES.find(c => c.id === p.cat) || CATEGORIES[4]; n[c.id] = (n[c.id] || 0) + 1; return c.code + "-" + String(n[c.id]).padStart(4, "0"); });
+  }
+  const open = new Set();
+  function card(p, i, no) {
+    const th = p._preview || p.thumb || p.src;
+    return `<div class="card${open.has(p.src) ? " open" : ""}${p._preview ? " new" : ""}" data-i="${i}">
+      ${isVid(p.src) ? `<video class="th" src="${esc(p._preview || p.src)}" muted loop playsinline preload="metadata"></video>` : `<img class="th" src="${esc(th)}" loading="lazy" alt="">`}
+      <div class="main">
+        <div class="row1"><span class="no">${no}</span><span class="fn">${esc(p.src.split("/").pop())}</span><span class="dim">${p.w ? p.w + "×" + p.h + " · " : ""}${kb(p.bytes)}</span></div>
+        <div class="f">
+          <input class="title" data-f="title" value="${esc(p.title)}" placeholder="title (optional)">
+          <input data-f="place" value="${esc(p.place)}" placeholder="place">
+          <select data-f="cat">${opts(p.cat)}</select>
+        </div>
+        <div class="acts">
+          <button class="star${p.featured ? " on" : ""}" data-a="star" title="Show on the homepage">★ home</button>
+          ${isVid(p.src) ? "" : `<button data-a="rot" title="Turn 90°">⟳ turn</button>`}
+          <button data-a="up" title="Move up">↑</button><button data-a="down" title="Move down">↓</button>
+          <button data-a="more">${open.has(p.src) ? "less" : "more"}</button>
+          <button class="del" data-a="del">delete</button>
+        </div>
+        <div class="more"><div>
+          ${["date", "camera", "lens", "settings"].map(f => `<label>${f}<input data-f="${f}" value="${esc(p[f])}"></label>`).join("")}
+          <label class="wide">notes<textarea data-f="notes" rows="2">${esc(p.notes)}</textarea></label>
+        </div></div>
+      </div>
+    </div>`;
+  }
+  function render() {
+    const nos = numbers(), q = $("q").value.trim().toLowerCase(), fc = $("fcat").value;
+    let shown = 0;
+    $("items").innerHTML = items.map((p, i) => {
+      if (fc && p.cat !== fc) return "";
+      if (q && ![p.title, p.place, nos[i], p.src, p.notes].join(" ").toLowerCase().includes(q)) return "";
+      shown++; return card(p, i, nos[i]);
+    }).join("");
+    $("sum").textContent = `${items.length} items · ${items.filter(p => p.featured).length} on homepage${shown !== items.length ? ` · showing ${shown}` : ""}`;
+  }
+
+  // ---------- saving ----------
+  const clean = () => items.map(p => { const o = {}; for (const [k, x] of Object.entries(p)) if (!k.startsWith("_") && x !== "" && x !== false && x != null) o[k] = x; return o; });
+  const listFiles = () => {
+    const json = JSON.stringify(clean(), null, 1);
+    return [
+      { path: "photos.json", blob: new Blob([json], { type: "application/json" }) },
+      { path: "photos.js", blob: new Blob([`// generated by the dashboard; edit at /admin.html\nwindow.PHOTOS_RAW = ${json};\n`], { type: "text/javascript" }) },
+    ];
+  };
+  let saveT;
+  function save() {
+    if (!LOCAL) { dirty = true; status("unpublished changes"); refreshPub(); return; }
+    clearTimeout(saveT); status("saving…");
+    saveT = setTimeout(async () => {
+      try {
+        const r = await fetch("api/save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clean(), null, 1) });
+        if (!r.ok) throw 0;
+        status("saved ✓", "ok");
+      } catch (e) { status("not saved: is the server running?", "err"); }
+    }, 500);
+  }
+  async function publish() {
+    if (!GH.ready()) { $("gh").open = true; return; }
+    $("pub").disabled = true;
+    try {
+      let files;
+      if (LOCAL) {          // send the whole site; only files that differ from GitHub actually upload
+        // guard: if the list on GitHub was changed from another device since this computer last published, ask first
+        const remote = await GH.remoteSha("photos.json"), last = GH.ls.get("gh.lastList");
+        if (remote && last && remote !== last &&
+            !confirm("The photo list on the live site was changed from another device (like your phone) since this computer last published.\n\nPublishing now replaces those edits with this computer's version. Continue?")) {
+          status("publish cancelled"); refreshPub(); return;
+        }
+        const paths = await (await fetch("api/files")).json();
+        files = [];
+        for (const [k, p] of paths.entries()) {
+          status(`reading ${k + 1}/${paths.length}`);
+          files.push({ path: p, blob: await (await fetch(p, { cache: "no-store" })).blob() });
+        }
+      } else {
+        files = [...pending].map(([path, blob]) => ({ path, blob })).concat(listFiles());
+      }
+      const n = await GH.commit(files, LOCAL ? "Publish site from dashboard" : "Update from dashboard", (i, t, p) => status(`checking ${i}/${t}`));
+      const listBlob = files.find(f => f.path === "photos.json");
+      if (LOCAL && listBlob) GH.ls.set("gh.lastList", await GH.sha(listBlob.blob));
+      pending.clear(); dirty = false;
+      items.forEach(p => delete p._preview);
+      status(n ? `published ${n} file${n > 1 ? "s" : ""} ✓ · live in about a minute` : "already up to date ✓", "ok");
+    } catch (e) { status("publish failed: " + e.message, "err"); }
+    refreshPub();
+  }
+  $("pub").onclick = publish;
+
+  const box = $("items");
+  box.addEventListener("input", e => {
+    const el = e.target.closest("[data-f]"); if (!el) return;
+    const p = items[+el.closest(".card").dataset.i];
+    p[el.dataset.f] = el.value;
+    if (el.dataset.f === "cat") render();
+    save();
+  });
+  box.addEventListener("click", async e => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const cardEl = b.closest(".card"), i = +cardEl.dataset.i, p = items[i];
+    switch (b.dataset.a) {
+      case "star": p.featured = !p.featured; b.classList.toggle("on", p.featured); save(); $("sum").textContent = $("sum").textContent.replace(/\d+ on homepage/, items.filter(x => x.featured).length + " on homepage"); return;
+      case "more": open.has(p.src) ? open.delete(p.src) : open.add(p.src); cardEl.classList.toggle("open"); b.textContent = open.has(p.src) ? "less" : "more"; return;
+      case "del": if (!confirm("Remove this from the site? (The file itself is kept.)")) return; items.splice(i, 1); break;
+      case "up": if (i > 0) [items[i - 1], items[i]] = [items[i], items[i - 1]]; break;
+      case "down": if (i < items.length - 1) [items[i + 1], items[i]] = [items[i], items[i + 1]]; break;
+      case "rot":
+        cardEl.classList.add("busy");
+        try {
+          if (LOCAL) {
+            const r = await fetch(`api/rotate?src=${encodeURIComponent(p.src)}&deg=90`, { method: "POST" });
+            if (!r.ok) throw 0;
+            Object.assign(p, await r.json());
+            cardEl.querySelector(".th").src = (p.thumb || p.src) + "?v=" + Date.now();
+          } else {
+            const srcBlob = pending.get(p.src) || await (await fetch(p.src, { cache: "no-store" })).blob();
+            const r = await rotatePhoto(srcBlob, 90);
+            pending.set(p.src, r.full);
+            const tpath = p.thumb || p.src.replace(/^img\//, "img/t/"); p.thumb = tpath;
+            pending.set(tpath, r.thumb);
+            Object.assign(p, { w: r.w, h: r.h, bytes: r.bytes, _preview: URL.createObjectURL(r.thumb) });
+            cardEl.querySelector(".th").src = p._preview;
+          }
+          cardEl.querySelector(".dim").textContent = `${p.w}×${p.h} · ${kb(p.bytes)}`;
+        } catch (err) { status("couldn't turn that photo", "err"); }
+        cardEl.classList.remove("busy"); save(); return;
+    }
+    render(); save();
+  });
+  $("q").oninput = render; $("fcat").onchange = render;
+
+  // ---------- uploading ----------
+  const safeName = n => n.toLowerCase().replace(/\.[^.]+$/, "").replace(/[^\w\-]+/g, "_").slice(0, 60) || "photo";
+  const taken = new Set(items.map(p => p.src));
+  const unique = (base, ext) => { let n = `img/${base}${ext}`, k = 1; while (taken.has(n)) n = `img/${base}-${k++}${ext}`; taken.add(n); return n; };
+  async function upload(files) {
+    const ups = $("ups");
+    for (const file of files) {
+      const row = document.createElement("div");
+      row.innerHTML = `<span>${esc(file.name)}</span><b>processing…</b>`;
+      ups.prepend(row);
+      try {
+        let meta;
+        if (LOCAL) {
+          const r = await fetch("api/upload?name=" + encodeURIComponent(file.name), { method: "POST", body: file });
+          if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "failed");
+          meta = await r.json();
+        } else if (/^video\//.test(file.type) || isVid(file.name)) {
+          if (file.size > 25 * 1048576) throw new Error("clips must be under 25 MB");
+          const src = unique(safeName(file.name), "." + (file.name.split(".").pop() || "mp4").toLowerCase());
+          pending.set(src, file);
+          meta = { src, bytes: file.size, _preview: URL.createObjectURL(file) };
+        } else {
+          const r = await processPhoto(file);
+          const src = unique(safeName(file.name), ".jpg"), thumb = src.replace(/^img\//, "img/t/");
+          pending.set(src, r.full); pending.set(thumb, r.thumb);
+          const { full, thumb: tb, ...rest } = r;
+          meta = { ...rest, src, thumb, _preview: URL.createObjectURL(r.thumb) };
+        }
+        items.unshift({ cat: $("defcat").value, place: "", ...meta, src: meta.src });
+        row.querySelector("b").textContent = LOCAL ? "added ✓" : "ready to publish";
+        render(); save();
+      } catch (e) { row.querySelector("b").textContent = "failed: " + e.message; }
+      setTimeout(() => row.remove(), 6000);
+    }
+  }
+  $("addb").onclick = () => $("pick").click();
+  $("pick").onchange = () => { upload([...$("pick").files]); $("pick").value = ""; };
+  const da = $("dropall"); let depth = 0;
+  addEventListener("dragenter", e => { if ([...e.dataTransfer.types].includes("Files")) { depth++; da.classList.add("on"); } });
+  addEventListener("dragleave", () => { if (--depth <= 0) { depth = 0; da.classList.remove("on"); } });
+  addEventListener("dragover", e => e.preventDefault());
+  addEventListener("drop", e => { e.preventDefault(); depth = 0; da.classList.remove("on"); upload([...e.dataTransfer.files]); });
+  addEventListener("beforeunload", e => { if (!LOCAL && (pending.size || dirty)) { e.preventDefault(); e.returnValue = ""; } });
+
+  // ---------- start ----------
+  (async () => {
+    try { LOCAL = (await fetch("api/files", { method: "GET" })).ok; } catch (e) { LOCAL = false; }
+    $("hint").textContent = LOCAL
+      ? "On this computer: changes save here as you type. Press “publish to site” to send everything to GitHub; the live site updates about a minute later."
+      : "Online: add photos from your camera roll or edit details, then press “publish”. Photos are made upright, resized and watermarked right here before uploading. The live site updates about a minute after publishing.";
+    status(LOCAL ? "all saved" : "up to date");
+    initGhForm(); refreshPub(); render();
+  })();
+</script>
+</body>
+</html>

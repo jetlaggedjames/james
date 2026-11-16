@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>About — James</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="photos.js"></script>
+<script src="data.js"></script>
+<script src="site.js"></script>
+
+<main class="page">
+  <div class="head"><h1>About</h1><span class="meta">file 000</span></div>
+  <div class="about">
+    <div class="portrait" id="pf">
+      <pre class="art" id="art" aria-hidden="true"></pre>
+      <img src="img/13.webp" alt="James photographing Starhopper at Starbase">
+      <span class="tag">hover for the original</span>
+    </div>
+    <div>
+      <!-- About text goes here: James will write this. -->
+      <div class="specs">
+        <span>camera</span><b>Canon EOS Rebel XSi</b>
+        <span>reach me</span><b><a href="contact.html">contact form →</a></b>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="ascii.js"></script>
+<script src="sig.js"></script>
+<script>
+  const pf = document.getElementById("pf");
+  const art = new AsciiArt(document.getElementById("art"), { cols: 150, minFont: 3 });
+  // fill the 3:4 frame exactly; the grid centers whatever sub-character slack is left
+  function run() { art.size(pf.clientWidth, pf.clientHeight); art.show({ src: "img/13.webp" }); }
+  run();
+  new ResizeObserver(() => { clearTimeout(run.t); run.t = setTimeout(run, 150); }).observe(pf);
+</script>
+</body>
+</html>
