@@ -208,6 +208,8 @@ pre.art{margin:0;font-family:var(--mono);color:var(--art);line-height:1;letter-s
 .portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
 .portrait:hover img{opacity:1}
 .portrait .tag{position:absolute;left:8px;bottom:8px;font:10px var(--mono);background:var(--paper);padding:1px 5px;color:var(--ink-2)}
+.prose{font:19px/1.6 var(--serif);max-width:60ch;margin-bottom:24px}
+.prose p{margin:0 0 1em}
 .specs{font:12px var(--mono);border-top:1px solid var(--rule);padding-top:12px;display:grid;grid-template-columns:120px 1fr;gap:4px 12px;color:var(--ink-2)}
 .specs b{color:var(--ink);font-weight:400}
 

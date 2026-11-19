@@ -11,13 +11,23 @@
   };
 
   // ---------------- GitHub ----------------
-  const cfg = () => ({ repo: ls.get("gh.repo"), branch: ls.get("gh.branch") || "main", token: ls.get("gh.token") });
+  const cfg = () => ({ repo: ls.get("gh.repo").replace(/[^\w.\-\/]/g, ""), branch: ls.get("gh.branch") || "main", token: ls.get("gh.token").replace(/[^A-Za-z0-9_]/g, "") });
   async function api(path, opts = {}) {
     const c = cfg();
-    const r = await fetch(`https://api.github.com/repos/${c.repo}${path}`, {
-      ...opts,
-      headers: { Authorization: `Bearer ${c.token}`, Accept: "application/vnd.github+json", ...(opts.body ? { "Content-Type": "application/json" } : {}) },
-    });
+    let r;
+    for (let attempt = 1; ; attempt++) {          // retry dropped connections a few times before giving up
+      try {
+        r = await fetch(`https://api.github.com/repos/${c.repo}${path}`, {
+          ...opts,
+          headers: { Authorization: `Bearer ${c.token}`, Accept: "application/vnd.github+json", ...(opts.body ? { "Content-Type": "application/json" } : {}) },
+        });
+        if (r.status >= 500 && attempt < 4) throw new Error("server " + r.status);
+        break;
+      } catch (e) {
+        if (attempt >= 4) throw new Error("couldn't reach GitHub (" + e.message + "). Check your connection and try again");
+        await new Promise(res => setTimeout(res, 1000 * attempt));
+      }
+    }
     if (!r.ok) {
       const m = (await r.json().catch(() => ({}))).message || r.statusText;
       throw new Error(r.status === 401 ? "GitHub rejected the token" : r.status === 404 ? "repo not found (check the name and the token's access)" :

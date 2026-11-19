@@ -22,7 +22,7 @@
       <span class="tag">hover for the original</span>
     </div>
     <div>
-      <!-- About text goes here: James will write this. -->
+      <div class="prose" id="abouttext"></div>
       <div class="specs">
         <span>camera</span><b>Canon EOS Rebel XSi</b>
         <span>reach me</span><b><a href="contact.html">contact form →</a></b>
@@ -31,9 +31,13 @@
   </div>
 </main>
 
+<script src="about.js"></script>
 <script src="ascii.js"></script>
 <script src="sig.js"></script>
 <script>
+  // About text comes from the dashboard; blank lines separate paragraphs
+  document.getElementById("abouttext").innerHTML = (window.ABOUT_TEXT || "").split(/\n\s*\n/).filter(s => s.trim())
+    .map(p => "<p>" + p.trim().replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]).replace(/\n/g, "<br>") + "</p>").join("");
   const pf = document.getElementById("pf");
   const art = new AsciiArt(document.getElementById("art"), { cols: 150, minFont: 3 });
   // fill the 3:4 frame exactly; the grid centers whatever sub-character slack is left
